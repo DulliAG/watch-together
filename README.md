@@ -1,85 +1,43 @@
-# watch-together
+## Verbesserungsmöglichkeiten
 
-watch-together is a simple and made with material design Watch2Gether clone.
-I do not came up with this idea. This is just a simple clone of a already existing project, called Watch Together.
-So please notice, that I am not the founder of this. This project is just for learning purposes.
+- [ ] Mehrere Sprachen anbieten
+- [ ] Vorspulen syncen
+- [ ] Abspielgeschwindigkeit syncen
+- [ ] Doppelte Nachrichten beim erstellen und Beitreten eines Raumes verhindern
+- [ ] VideoUrl und aktuelle Zeit mitteilen wenn jemand beitritt
 
-## Test the project
+## Start
 
-You can test it on the github page or you can install it by yourself (Coming Soon).
-Just do the following:
+## Dockerize
 
-### Running without Docker
+### Frontend
 
-Navigate to your favourite directory and clone the repository.
+**Build an container**
 
-```sh
-git clone https://github.com/FlorianWoelki/watch-together.git
+```bash
+docker build --secret id=npm,src=.npmrc . -t ghcr.io/dulliag/w2g-frontend:<TAG>
 ```
 
-After that, you need to install all necessary modules for this project.
+**Run the container**
 
-```sh
-npm install
+> The app will be reachable under http://localhost:3000
+
+```bash
+docker run -itd -p 3000:80 --env-file '.env' --restart always --name=w2g-frontend ghcr.io/dulliag/w2g-frontend:<TAG>
 ```
 
-Now you have a fully working project. You can start the project in your directory.
+### Backend
 
-```sh
-npm start
+**Build an container**
+
+```bash
+docker build . -t ghcr.io/dulliag/w2g-backend:<TAG>
 ```
 
-### Running with Docker
+**Run the container**
 
-Navigate to your favourite directory and clone the repository.
+> The app will be reachable under http://localhost:3001
 
-```sh
-git clone https://github.com/FlorianWoelki/watch-together.git
+```bash
+docker run -itd -p 3001:8081 --env-file '.env' --restart always --name=w2g-backend ghcr.io/dulliag/w2g-backend:<TAG>
 ```
-
-Now you need to build the image. Make sure that you are in the project directory.
-
-```
-docker build -t <username>/watch-together .
-```
-
-Let's run the docker container.
-
-```
-docker run -p 5000:5000 -d <username>/watch-together
-```
-
-The server is now up and running.
-
-You just need to navigate to localhost:5000 or to your website and you are good to go!
-
-## Tech
-
-| Library        | Link                        |
-| -------------- | --------------------------- |
-| Node JS        | https://nodejs.org/en/      |
-| MaterializeCSS | https://materializecss.com/ |
-| SocketIO       | https://socket.io/          |
-| Mocha          | https://mochajs.org/        |
-| Chai           | https://www.chaijs.com/     |
-
-## Authors
-
-- **[FlorianWoelki](https://github.com/FlorianWoelki)** - _Initial work_
-
-## License
-
-This project is licensed to the MIT license.
-
-_Free Software, Hell Yeah!_
-
-## Acknowledgments
-
-- Thanks to Watch2Gether for this good practice example!
-- Thanks to MaterializeCSS for this awesome framework!
-
-## ToDo
-
-- [ ] Add Vue?
-- [x] Add Dockerfile
-- [ ] Add docker-compose file for database?
