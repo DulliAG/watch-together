@@ -5,7 +5,7 @@ import { Container } from '@mui/material';
 import { Route, Routes } from 'react-router-dom';
 import { connect } from 'socket.io-client';
 
-export const socket = connect(process.env.REACT_APP_SOCKET_URL as string);
+export const socket = connect(window.location.protocol + '//' + window.location.hostname + ':8080');
 
 export const App = () => {
   const { breakpoint } = useWindowDimensions();

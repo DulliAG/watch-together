@@ -7,7 +7,7 @@ import { Server } from 'socket.io';
 
 dotenv.config();
 
-const port = 8081;
+const port = 8080;
 const app = express();
 app.use(cors());
 
@@ -24,9 +24,10 @@ function log(message: string) {
 }
 
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
     methods: ['GET', 'POST'],
   },
 });
