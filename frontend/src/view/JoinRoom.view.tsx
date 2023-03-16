@@ -13,6 +13,7 @@ import {
   InputLabel,
   IconButton,
 } from '@mui/material';
+import { nanoid } from 'nanoid';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,7 +24,7 @@ export const JoinRoom = () => {
 
   const handler = {
     onCreateRoom: () => {
-      socket.emit('create_room', crypto.randomUUID());
+      socket.emit('create_room', nanoid());
     },
     onJoinRoom: () => {
       if (room === '' || room.length < 1) return;
