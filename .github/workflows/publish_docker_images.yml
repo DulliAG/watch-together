@@ -1,4 +1,4 @@
-name: Publish Docker image
+name: Publish Docker Images
 
 on:
   push:
@@ -8,18 +8,18 @@ on:
 
 jobs:
   build_frontend_image:
-    name: Build frontend image
+    name: Build Frontend Image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build Docker image
+      - name: Build Image
         run: |
-          cd frontend
+          cd frontend/
           rm .npmrc 
           echo $'@dulliag:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken='$NPM_TOKEN >> .npmrc
-          docker build --secret id=npm,src=.npmrc . -t ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }}     
-          mkdir -p frontent_artifacts
-          docker save ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }} > frontent_artifacts/docker-image.tar
+          docker build --secret id=npm,src=.npmrc . -t ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }}
+          mkdir -p frontend_artifacts
+          docker save ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }} > frontend_artifacts/docker-image.tar
         env:
           DOCKER_BUILDKIT: 1
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -28,114 +28,76 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: docker-frontend
-          path: frontent_artifacts
+          path: frontend/frontend_artifacts
           retention-days: 1
 
-  push_frontend_image:
-    needs: build_frontend_image
-    name: Push frontend image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Retrieve saved Docker image
-        uses: actions/download-artifact@v2
-        with:
-          name: docker-frontend
-          path: frontend_artifacts
-
-      - name: Load Docker image
-        run: |
-          cd frontend_artifacts
-          docker load < docker-image.tar
-      - name: Login
-        run: |
-          echo ${{ secrets.NPM_TOKEN }} | docker login ghcr.io -u ${{ secrets.DOCKER_USER }} --password-stdin
-      - name: Push Docker image
-        run: |
-          docker push ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }}
-
   build_backend_image:
-    name: Build backend image
+    name: Build Backend Image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build Docker image
+      - name: Build Image
         run: |
+          cd backend/
           docker build . -t ghcr.io/dulliag/w2g-backend:${{ github.ref_name }}
           mkdir -p backend_artifacts
           docker save ghcr.io/dulliag/w2g-backend:${{ github.ref_name }} > backend_artifacts/docker-image.tar
         env:
-          DOCKER_BUILDKIT: 1
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Save Docker image
         uses: actions/upload-artifact@v2
         with:
-          name: docker-frontend
-          path: frontent_artifacts
+          name: docker-backend
+          path: backend/backend_artifacts
           retention-days: 1
 
-  push_backend_image:
-    needs: build_backend_image
-    name: Push backend image
+  push_images:
+    needs:
+      - build_frontend_image
+      - build_backend_image
+    name: Push Images
     runs-on: ubuntu-latest
     steps:
-      - name: Retrieve saved Docker image
+      - name: Retrieve Frontend Image
         uses: actions/download-artifact@v2
         with:
           name: docker-frontend
-          path: backend_artifacts
+          path: frontend/frontend_artifacts
 
-      - name: Load Docker image
-        run: |
-          cd backend_artifacts
-          docker load < docker-image.tar
+      - name: Retrieve Backend Image
+        uses: actions/download-artifact@v2
+        with:
+          name: docker-backend
+          path: backend/backend_artifacts
+
       - name: Login
         run: |
           echo ${{ secrets.NPM_TOKEN }} | docker login ghcr.io -u ${{ secrets.DOCKER_USER }} --password-stdin
-      - name: Push Docker image
+
+      - name: Push Frontend Image
         run: |
+          cd frontend/frontend_artifacts
+          docker load < docker-image.tar          
+          docker push ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }}
+
+      - name: Push Backend Image
+        run: |
+          cd backend/backend_artifacts
+          docker load < docker-image.tar          
           docker push ghcr.io/dulliag/w2g-backend:${{ github.ref_name }}
 
   cleanup:
-    needs:
-      - push_frontend_image
-      - push_backend_image
+    needs: push_images
     name: Cleanup
     runs-on: ubuntu-latest
     steps:
-      - name: Delete artifact
+      - name: Delete Frontend Artifact
         uses: geekyeggo/delete-artifact@v1
         with:
           name: docker-frontend
-      - name: Delete artifact
+
+      - name: Delete Backend Artifact
         uses: geekyeggo/delete-artifact@v1
         with:
           name: docker-backend
-
-  deploy_image:
-    needs: cleanup
-    name: Deploy Docker image to server
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Connect and deploy
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER }}
-          username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: 22
-          script: |
-            echo ${{ secrets.PAT }} | docker login ghcr.io -u ${{ secrets.DOCKER_USER }} --password-stdin
-            docker container stop w2g-frontend
-            docker container stop w2g-backend
-            docker container rm w2g-frontend
-            docker container rm w2g-backend
-            docker image rm ghcr.io/dulliag/w2g-frontend:latest
-            docker image rm ghcr.io/dulliag/w2g-backend:latest
-            docker pull ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }}
-            docker pull ghcr.io/dulliag/w2g-backend:${{ github.ref_name }}
-            docker tag ghcr.io/dulliag/w2g-frontend:${{ github.ref_name }} ghcr.io/dulliag/w2g-frontend:latest
-            docker tag ghcr.io/dulliag/w2g-backend:${{ github.ref_name }} ghcr.io/dulliag/w2g-backend:latest
-            docker run -itd -p 3000:80 -e TZ=Europe/Berlin --env-file=/home/dulliag/w2g-frontend.env --restart always --name=w2g-frontend ghcr.io/dulliag/w2g-frontend:latest
-            docker run -itd -p 3001:8081 -e TZ=Europe/Berlin --env-file=/home/dulliag/w2g-frontend.env --restart always --name=w2g-backend ghcr.io/dulliag/w2g-backend:latest
